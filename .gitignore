@@ -1,0 +1,22 @@
+# Entorno virtual
+.venv/
+
+# Variables de entorno
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Herramientas
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Alembic
+alembic/versions/__pycache__/
