@@ -71,3 +71,9 @@ class Company(Base):
     back_populates="company",
     cascade="all, delete-orphan",
 )
+
+    services = relationship(
+    "Service",
+    back_populates="company",
+    cascade="all, delete-orphan",
+)
