@@ -9,6 +9,7 @@ from app.modules.customer.router import router as customer_router
 from app.modules.service.router import router as service_router
 from app.modules.employee.router import router as employee_router
 from app.modules.audit.router import router as audit_router
+from app.modules.appointment.router import router as appointment_router
 
 
 api_router = APIRouter()
@@ -35,3 +36,5 @@ api_router.include_router(
 )
 
 api_router.include_router(audit_router)
+
+api_router.include_router(appointment_router)

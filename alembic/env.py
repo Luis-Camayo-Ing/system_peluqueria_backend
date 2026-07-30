@@ -12,6 +12,7 @@ from app.modules.employee import model as employee_model  # noqa: F401
 from app.modules.rbac import model as rbac_model  # noqa: F401
 from app.modules.service import model as service_model  # noqa: F401
 from app.modules.user import model as user_model  # noqa: F401
+from app.modules.appointment.model import Appointment
 
 
 config = context.config
