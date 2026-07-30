@@ -5,10 +5,13 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.db.base import Base
+from app.modules.audit import model as audit_model  # noqa: F401
 from app.modules.company import model as company_model  # noqa: F401
-from app.modules.user import model as user_model  # noqa: F401
 from app.modules.customer import model as customer_model  # noqa: F401
+from app.modules.employee import model as employee_model  # noqa: F401
+from app.modules.rbac import model as rbac_model  # noqa: F401
 from app.modules.service import model as service_model  # noqa: F401
+from app.modules.user import model as user_model  # noqa: F401
 
 
 config = context.config
@@ -47,7 +50,10 @@ def run_migrations_online() -> None:
     """Ejecuta migraciones conectándose a PostgreSQL."""
 
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        config.get_section(
+            config.config_ini_section,
+            {},
+        ),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

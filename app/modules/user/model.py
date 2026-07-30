@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -6,9 +6,13 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.modules.rbac.model import user_roles
+
 
 if TYPE_CHECKING:
     from app.modules.company.model import Company
+    from app.modules.rbac.model import Role
+
 
 class User(Base):
     __tablename__ = "users"
@@ -19,7 +23,10 @@ class User(Base):
     )
 
     company_id: Mapped[UUID] = mapped_column(
-        ForeignKey("companies.id"),
+        ForeignKey(
+            "companies.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
     )
 
@@ -37,11 +44,13 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
+        nullable=False,
     )
 
     is_verified: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
+        nullable=False,
     )
 
     last_login: Mapped[datetime | None] = mapped_column(
@@ -63,5 +72,12 @@ class User(Base):
     )
 
     company: Mapped["Company"] = relationship(
-        back_populates="users"
+        back_populates="users",
+    )
+
+    roles: Mapped[list["Role"]] = relationship(
+        "Role",
+        secondary=user_roles,
+        back_populates="users",
+        lazy="selectin",
     )
