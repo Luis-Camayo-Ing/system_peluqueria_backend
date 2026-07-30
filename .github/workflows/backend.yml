@@ -1,0 +1,68 @@
+﻿name: ERP Beauty Pro Backend CI
+
+on:
+  push:
+    branches:
+      - develop
+      - "feature/**"
+
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend-validation:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: system_peluqueria_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d system_peluqueria_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/system_peluqueria_test
+      SECRET_KEY: ci-secret-key-only-for-automated-tests
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Instalar Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compilar aplicacion
+        run: |
+          python -m compileall app
+
+      - name: Aplicar migraciones
+        run: |
+          alembic upgrade head
+
+      - name: Validar migraciones
+        run: |
+          alembic check
