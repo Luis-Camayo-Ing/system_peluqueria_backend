@@ -3,8 +3,13 @@ from decimal import Decimal
 
 from app.modules.inventory.exceptions import (
     BarcodeAlreadyExistsException,
+    InsufficientStockException,
+    InvalidInventoryMovementTypeException,
     InvalidPriceException,
     InvalidStockException,
+    InventoryMovementNotFoundException,
+    InventoryMovementProcessingException,
+    InventoryMovementProductInactiveException,
     ProductAlreadyExistsException,
     ProductCategoryAlreadyExistsException,
     ProductCategoryHasProductsException,
@@ -13,16 +18,214 @@ from app.modules.inventory.exceptions import (
     ProductNotFoundException,
 )
 from app.modules.inventory.model import (
+    InventoryMovement,
+    InventoryMovementDetail,
+    InventoryMovementType,
     Product,
     ProductCategory,
 )
 from app.modules.inventory.repository import InventoryRepository
 from app.modules.inventory.schemas import (
+    InventoryMovementCreate,
+    InventoryMovementDetailCreate,
     ProductCategoryCreate,
     ProductCategoryUpdate,
     ProductCreate,
     ProductUpdate,
 )
+
+
+class InventoryMovementService:
+    def __init__(
+        self,
+        repository: InventoryRepository,
+    ):
+        self.repository = repository
+
+    def create_movement(
+        self,
+        company_id: uuid.UUID,
+        user_id: uuid.UUID,
+        data: InventoryMovementCreate,
+    ) -> InventoryMovement:
+        try:
+            movement = self._create_header(
+                company_id=company_id,
+                user_id=user_id,
+                data=data,
+            )
+
+            for detail in data.details:
+                self._process_detail(
+                    movement=movement,
+                    company_id=company_id,
+                    movement_type=data.movement_type,
+                    detail_data=detail,
+                )
+
+            self.repository.commit()
+
+            return self.repository.refresh_movement(
+                movement
+            )
+
+        except (
+            ProductNotFoundException,
+            InsufficientStockException,
+            InventoryMovementProductInactiveException,
+            InvalidInventoryMovementTypeException,
+        ):
+            self.repository.rollback()
+            raise
+
+        except Exception as exception:
+            self.repository.rollback()
+            raise InventoryMovementProcessingException() from exception
+
+    def get_movement(
+        self,
+        movement_id: uuid.UUID,
+        company_id: uuid.UUID,
+    ) -> InventoryMovement:
+        movement = self.repository.get_movement_by_id(
+            movement_id=movement_id,
+            company_id=company_id,
+        )
+
+        if movement is None:
+            raise InventoryMovementNotFoundException()
+
+        return movement
+
+    def list_movements(
+        self,
+        company_id: uuid.UUID,
+        skip: int = 0,
+        limit: int = 20,
+        movement_type: InventoryMovementType | None = None,
+        product_id: uuid.UUID | None = None,
+        user_id: uuid.UUID | None = None,
+        reference: str | None = None,
+    ) -> dict:
+        movements = self.repository.list_movements(
+            company_id=company_id,
+            skip=skip,
+            limit=limit,
+            movement_type=movement_type,
+            product_id=product_id,
+            user_id=user_id,
+            reference=reference,
+        )
+
+        total = self.repository.count_movements(
+            company_id=company_id,
+            movement_type=movement_type,
+            product_id=product_id,
+            user_id=user_id,
+            reference=reference,
+        )
+
+        return {
+            "total": total,
+            "items": movements,
+        }
+
+    def _create_header(
+        self,
+        company_id: uuid.UUID,
+        user_id: uuid.UUID,
+        data: InventoryMovementCreate,
+    ) -> InventoryMovement:
+        movement = InventoryMovement(
+            company_id=company_id,
+            user_id=user_id,
+            movement_type=data.movement_type,
+            reference=data.reference,
+            reason=data.reason,
+            notes=data.notes,
+        )
+
+        self.repository.db.add(movement)
+        self.repository.flush()
+
+        return movement
+
+    def _process_detail(
+        self,
+        movement: InventoryMovement,
+        company_id: uuid.UUID,
+        movement_type: InventoryMovementType,
+        detail_data: InventoryMovementDetailCreate,
+    ) -> None:
+        product = self.repository.get_product_for_update(
+            product_id=detail_data.product_id,
+            company_id=company_id,
+        )
+
+        if product is None:
+            raise ProductNotFoundException()
+
+        if not product.is_active:
+            raise InventoryMovementProductInactiveException()
+
+        stock_before = product.current_stock
+
+        stock_after = self._calculate_stock_after(
+            movement_type=movement_type,
+            stock_before=stock_before,
+            quantity=detail_data.quantity,
+            product_name=product.name,
+        )
+
+        product.current_stock = stock_after
+
+        movement_detail = InventoryMovementDetail(
+            movement_id=movement.id,
+            product_id=product.id,
+            quantity=detail_data.quantity,
+            stock_before=stock_before,
+            stock_after=stock_after,
+            unit_cost=detail_data.unit_cost,
+        )
+
+        self.repository.add_movement_detail(
+            movement_detail
+        )
+
+    def _calculate_stock_after(
+        self,
+        movement_type: InventoryMovementType,
+        stock_before: Decimal,
+        quantity: Decimal,
+        product_name: str,
+    ) -> Decimal:
+        increase_types = {
+            InventoryMovementType.ENTRY,
+            InventoryMovementType.ADJUSTMENT_IN,
+            InventoryMovementType.RETURN_IN,
+        }
+
+        decrease_types = {
+            InventoryMovementType.EXIT,
+            InventoryMovementType.ADJUSTMENT_OUT,
+            InventoryMovementType.CONSUMPTION,
+            InventoryMovementType.RETURN_OUT,
+        }
+
+        if movement_type in increase_types:
+            return stock_before + quantity
+
+        if movement_type in decrease_types:
+            stock_after = stock_before - quantity
+
+            if stock_after < Decimal("0.000"):
+                raise InsufficientStockException(
+                    product_name=product_name,
+                )
+
+            return stock_after
+
+        raise InvalidInventoryMovementTypeException()
 
 
 class InventoryService:
@@ -31,10 +234,6 @@ class InventoryService:
         repository: InventoryRepository,
     ):
         self.repository = repository
-
-    # ======================================================
-    # Product Categories
-    # ======================================================
 
     def create_category(
         self,
@@ -154,10 +353,6 @@ class InventoryService:
         category.is_active = False
 
         return self.repository.update_category(category)
-
-    # ======================================================
-    # Products
-    # ======================================================
 
     def create_product(
         self,
@@ -368,10 +563,6 @@ class InventoryService:
         product.is_active = False
 
         return self.repository.update_product(product)
-
-    # ======================================================
-    # Private validations
-    # ======================================================
 
     def _validate_category_for_product(
         self,

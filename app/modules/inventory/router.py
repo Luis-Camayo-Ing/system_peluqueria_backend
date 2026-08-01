@@ -6,8 +6,12 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.modules.audit.repository import AuditRepository
 from app.modules.audit.service import AuditService
+from app.modules.inventory.model import InventoryMovementType
 from app.modules.inventory.repository import InventoryRepository
 from app.modules.inventory.schemas import (
+    InventoryMovementCreate,
+    InventoryMovementListResponse,
+    InventoryMovementResponse,
     ProductCategoryCreate,
     ProductCategoryListResponse,
     ProductCategoryResponse,
@@ -17,7 +21,10 @@ from app.modules.inventory.schemas import (
     ProductResponse,
     ProductUpdate,
 )
-from app.modules.inventory.service import InventoryService
+from app.modules.inventory.service import (
+    InventoryMovementService,
+    InventoryService,
+)
 from app.modules.rbac.constants import (
     INVENTORY_CREATE,
     INVENTORY_DELETE,
@@ -49,11 +56,131 @@ def get_inventory_service(
     )
 
 
+def get_inventory_movement_service(
+    db: Session = Depends(get_db),
+) -> InventoryMovementService:
+    repository = InventoryRepository(db)
+
+    return InventoryMovementService(
+        repository=repository,
+    )
+
+
 def get_audit_service(
     db: Session = Depends(get_db),
 ) -> AuditService:
     return AuditService(
         AuditRepository(db),
+    )
+
+
+# ==========================================================
+# Inventory Movements
+# ==========================================================
+
+
+@router.post(
+    "/movements",
+    response_model=InventoryMovementResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_inventory_movement(
+    data: InventoryMovementCreate,
+    current_user: User = Depends(
+        require_permission(INVENTORY_CREATE)
+    ),
+    movement_service: InventoryMovementService = Depends(
+        get_inventory_movement_service
+    ),
+    audit_service: AuditService = Depends(get_audit_service),
+):
+    movement = movement_service.create_movement(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        data=data,
+    )
+
+    audit_service.log(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        module="inventory",
+        action="create_movement",
+        entity_type="InventoryMovement",
+        entity_id=str(movement.id),
+        description="Se creó un movimiento de inventario.",
+        details={
+            "movement_type": movement.movement_type.value,
+            "reference": movement.reference,
+            "reason": movement.reason,
+            "products_count": len(movement.details),
+        },
+    )
+
+    return movement
+
+
+@router.get(
+    "/movements",
+    response_model=InventoryMovementListResponse,
+)
+def list_inventory_movements(
+    skip: int = Query(
+        default=0,
+        ge=0,
+    ),
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+    ),
+    movement_type: InventoryMovementType | None = Query(
+        default=None,
+    ),
+    product_id: uuid.UUID | None = Query(
+        default=None,
+    ),
+    user_id: uuid.UUID | None = Query(
+        default=None,
+    ),
+    reference: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=100,
+    ),
+    current_user: User = Depends(
+        require_permission(INVENTORY_READ)
+    ),
+    movement_service: InventoryMovementService = Depends(
+        get_inventory_movement_service
+    ),
+):
+    return movement_service.list_movements(
+        company_id=current_user.company_id,
+        skip=skip,
+        limit=limit,
+        movement_type=movement_type,
+        product_id=product_id,
+        user_id=user_id,
+        reference=reference,
+    )
+
+
+@router.get(
+    "/movements/{movement_id}",
+    response_model=InventoryMovementResponse,
+)
+def get_inventory_movement(
+    movement_id: uuid.UUID,
+    current_user: User = Depends(
+        require_permission(INVENTORY_READ)
+    ),
+    movement_service: InventoryMovementService = Depends(
+        get_inventory_movement_service
+    ),
+):
+    return movement_service.get_movement(
+        movement_id=movement_id,
+        company_id=current_user.company_id,
     )
 
 
