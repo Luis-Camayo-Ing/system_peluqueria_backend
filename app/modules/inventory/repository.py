@@ -4,6 +4,9 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.modules.inventory.model import (
+    InventoryMovement,
+    InventoryMovementDetail,
+    InventoryMovementType,
     Product,
     ProductCategory,
 )
@@ -324,3 +327,160 @@ class InventoryRepository:
     ) -> None:
         self.db.delete(product)
         self.db.commit()
+
+    # ======================================================
+    # Inventory Movements
+    # ======================================================
+
+    def create_movement(
+        self,
+        movement: InventoryMovement,
+    ) -> InventoryMovement:
+        self.db.add(movement)
+        self.db.commit()
+        self.db.refresh(movement)
+
+        return movement
+
+    def get_movement_by_id(
+        self,
+        movement_id: uuid.UUID,
+        company_id: uuid.UUID,
+    ) -> InventoryMovement | None:
+        statement = select(InventoryMovement).where(
+            InventoryMovement.id == movement_id,
+            InventoryMovement.company_id == company_id,
+        )
+
+        return self.db.scalar(statement)
+
+    def list_movements(
+        self,
+        company_id: uuid.UUID,
+        skip: int = 0,
+        limit: int = 20,
+        movement_type: InventoryMovementType | None = None,
+        product_id: uuid.UUID | None = None,
+        user_id: uuid.UUID | None = None,
+        reference: str | None = None,
+    ) -> list[InventoryMovement]:
+        statement = select(InventoryMovement).where(
+            InventoryMovement.company_id == company_id
+        )
+
+        if movement_type is not None:
+            statement = statement.where(
+                InventoryMovement.movement_type == movement_type
+            )
+
+        if user_id is not None:
+            statement = statement.where(
+                InventoryMovement.user_id == user_id
+            )
+
+        if reference:
+            statement = statement.where(
+                InventoryMovement.reference.ilike(
+                    f"%{reference.strip()}%"
+                )
+            )
+
+        if product_id is not None:
+            statement = (
+                statement
+                .join(InventoryMovement.details)
+                .where(
+                    InventoryMovementDetail.product_id == product_id
+                )
+                .distinct()
+            )
+
+        statement = (
+            statement
+            .order_by(InventoryMovement.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+
+        return list(self.db.scalars(statement).unique().all())
+
+    def count_movements(
+        self,
+        company_id: uuid.UUID,
+        movement_type: InventoryMovementType | None = None,
+        product_id: uuid.UUID | None = None,
+        user_id: uuid.UUID | None = None,
+        reference: str | None = None,
+    ) -> int:
+        statement = (
+            select(func.count(func.distinct(InventoryMovement.id)))
+            .select_from(InventoryMovement)
+            .where(InventoryMovement.company_id == company_id)
+        )
+
+        if movement_type is not None:
+            statement = statement.where(
+                InventoryMovement.movement_type == movement_type
+            )
+
+        if user_id is not None:
+            statement = statement.where(
+                InventoryMovement.user_id == user_id
+            )
+
+        if reference:
+            statement = statement.where(
+                InventoryMovement.reference.ilike(
+                    f"%{reference.strip()}%"
+                )
+            )
+
+        if product_id is not None:
+            statement = (
+                statement
+                .join(InventoryMovement.details)
+                .where(
+                    InventoryMovementDetail.product_id == product_id
+                )
+            )
+
+        return self.db.scalar(statement) or 0
+
+    def get_product_for_update(
+        self,
+        product_id: uuid.UUID,
+        company_id: uuid.UUID,
+    ) -> Product | None:
+        statement = (
+            select(Product)
+            .where(
+                Product.id == product_id,
+                Product.company_id == company_id,
+            )
+            .with_for_update()
+        )
+
+        return self.db.scalar(statement)
+
+    def add_movement_detail(
+        self,
+        detail: InventoryMovementDetail,
+    ) -> None:
+        self.db.add(detail)
+
+    def flush(self) -> None:
+        self.db.flush()
+
+    def commit(self) -> None:
+        self.db.commit()
+
+    def rollback(self) -> None:
+        self.db.rollback()
+
+    def refresh_movement(
+        self,
+        movement: InventoryMovement,
+    ) -> InventoryMovement:
+        self.db.refresh(movement)
+
+        return movement

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -8,6 +9,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    Enum,
     ForeignKey,
     Index,
     Numeric,
@@ -20,6 +22,15 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+class InventoryMovementType(str, enum.Enum):
+    ENTRY = "entry"
+    EXIT = "exit"
+    ADJUSTMENT_IN = "adjustment_in"
+    ADJUSTMENT_OUT = "adjustment_out"
+    CONSUMPTION = "consumption"
+    RETURN_IN = "return_in"
+    RETURN_OUT = "return_out"
 
 
 class ProductCategory(Base):
@@ -281,4 +292,193 @@ class Product(Base):
     category: Mapped[ProductCategory] = relationship(
         "ProductCategory",
         back_populates="products",
+    )
+
+class InventoryMovement(Base):
+    __tablename__ = "inventory_movements"
+
+    __table_args__ = (
+        Index(
+            "ix_inventory_movements_company_created",
+            "company_id",
+            "created_at",
+        ),
+        Index(
+            "ix_inventory_movements_company_type",
+            "company_id",
+            "movement_type",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "companies.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "users.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    movement_type: Mapped[InventoryMovementType] = mapped_column(
+        Enum(
+            InventoryMovementType,
+            name="inventory_movement_type",
+            values_callable=lambda enum_class: [
+                item.value for item in enum_class
+            ],
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    reference: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+    )
+
+    reason: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+    )
+
+    notes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True,
+    )
+
+    company = relationship("Company")
+
+    user = relationship("User")
+
+    details: Mapped[list["InventoryMovementDetail"]] = relationship(
+        "InventoryMovementDetail",
+        back_populates="movement",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+class InventoryMovementDetail(Base):
+    __tablename__ = "inventory_movement_details"
+
+    __table_args__ = (
+        CheckConstraint(
+            "quantity > 0",
+            name="ck_inventory_movement_details_quantity_positive",
+        ),
+        CheckConstraint(
+            "stock_before >= 0",
+            name="ck_inventory_movement_details_stock_before_non_negative",
+        ),
+        CheckConstraint(
+            "stock_after >= 0",
+            name="ck_inventory_movement_details_stock_after_non_negative",
+        ),
+        UniqueConstraint(
+            "movement_id",
+            "product_id",
+            name="uq_inventory_movement_details_movement_product",
+        ),
+        Index(
+            "ix_inventory_movement_details_product_created",
+            "product_id",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    movement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "inventory_movements.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "products.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    quantity: Mapped[Decimal] = mapped_column(
+        Numeric(
+            precision=14,
+            scale=3,
+        ),
+        nullable=False,
+    )
+
+    stock_before: Mapped[Decimal] = mapped_column(
+        Numeric(
+            precision=14,
+            scale=3,
+        ),
+        nullable=False,
+    )
+
+    stock_after: Mapped[Decimal] = mapped_column(
+        Numeric(
+            precision=14,
+            scale=3,
+        ),
+        nullable=False,
+    )
+
+    unit_cost: Mapped[Decimal | None] = mapped_column(
+        Numeric(
+            precision=12,
+            scale=2,
+        ),
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    movement: Mapped["InventoryMovement"] = relationship(
+        "InventoryMovement",
+        back_populates="details",
+    )
+
+    product: Mapped["Product"] = relationship(
+        "Product",
     )

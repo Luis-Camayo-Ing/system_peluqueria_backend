@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from app.modules.inventory.model import InventoryMovementType
 
 from pydantic import (
     BaseModel,
@@ -378,3 +379,125 @@ class ProductResponse(ProductBase):
 class ProductListResponse(BaseModel):
     total: int = Field(ge=0)
     items: list[ProductResponse]
+
+
+# ==========================================================
+# Inventory Movement Schemas
+# ==========================================================
+
+
+class InventoryMovementDetailCreate(BaseModel):
+    product_id: uuid.UUID
+
+    quantity: Decimal = Field(
+        gt=0,
+        max_digits=14,
+        decimal_places=3,
+    )
+
+    unit_cost: Decimal | None = Field(
+        default=None,
+        ge=0,
+        max_digits=12,
+        decimal_places=2,
+    )
+
+
+class InventoryMovementCreate(BaseModel):
+    movement_type: InventoryMovementType
+
+    reference: str | None = Field(
+        default=None,
+        max_length=100,
+    )
+
+    reason: str = Field(
+        min_length=3,
+        max_length=500,
+    )
+
+    notes: str | None = Field(
+        default=None,
+        max_length=2000,
+    )
+
+    details: list[InventoryMovementDetailCreate] = Field(
+        min_length=1,
+    )
+
+    @field_validator(
+        "reference",
+        "notes",
+    )
+    @classmethod
+    def normalize_optional_text(
+        cls,
+        value: str | None,
+    ) -> str | None:
+        if value is None:
+            return None
+
+        normalized_value = value.strip()
+
+        return normalized_value or None
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str) -> str:
+        normalized_value = value.strip()
+
+        if len(normalized_value) < 3:
+            raise ValueError(
+                "El motivo debe contener al menos tres caracteres."
+            )
+
+        return normalized_value
+
+    @model_validator(mode="after")
+    def validate_unique_products(
+        self,
+    ) -> "InventoryMovementCreate":
+        product_ids = [
+            detail.product_id
+            for detail in self.details
+        ]
+
+        if len(product_ids) != len(set(product_ids)):
+            raise ValueError(
+                "Un producto no puede repetirse dentro "
+                "del mismo movimiento."
+            )
+
+        return self
+
+
+class InventoryMovementDetailResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    movement_id: uuid.UUID
+    product_id: uuid.UUID
+    quantity: Decimal
+    stock_before: Decimal
+    stock_after: Decimal
+    unit_cost: Decimal | None
+    created_at: datetime
+
+
+class InventoryMovementResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    company_id: uuid.UUID
+    user_id: uuid.UUID
+    movement_type: InventoryMovementType
+    reference: str | None
+    reason: str
+    notes: str | None
+    created_at: datetime
+    details: list[InventoryMovementDetailResponse]
+
+
+class InventoryMovementListResponse(BaseModel):
+    total: int = Field(ge=0)
+    items: list[InventoryMovementResponse]
