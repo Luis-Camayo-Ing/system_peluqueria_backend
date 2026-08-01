@@ -179,6 +179,13 @@ class InventoryMovementService:
 
         product.current_stock = stock_after
 
+        # Sincroniza el cambio con la base de datos
+        # sin confirmar la transacción.
+        self.repository.flush()
+
+        # El producto queda actualizado dentro de la transacción,
+        # pero todavía puede revertirse mediante rollback().
+
         movement_detail = InventoryMovementDetail(
             movement_id=movement.id,
             product_id=product.id,

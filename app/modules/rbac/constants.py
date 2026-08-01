@@ -100,6 +100,23 @@ INVENTORY_DELETE = "inventory:delete"
 
 
 # ==========================================================
+# Cash Register Permissions
+# ==========================================================
+
+CASH_REGISTERS_CREATE = "cash_registers:create"
+CASH_REGISTERS_READ = "cash_registers:read"
+CASH_REGISTERS_UPDATE = "cash_registers:update"
+CASH_REGISTERS_DELETE = "cash_registers:delete"
+
+CASH_SESSIONS_OPEN = "cash_sessions:open"
+CASH_SESSIONS_READ = "cash_sessions:read"
+CASH_SESSIONS_CLOSE = "cash_sessions:close"
+
+CASH_TRANSACTIONS_CREATE = "cash_transactions:create"
+CASH_TRANSACTIONS_READ = "cash_transactions:read"
+
+
+# ==========================================================
 # Payments Permissions
 # ==========================================================
 
@@ -170,6 +187,18 @@ SYSTEM_PERMISSIONS = [
     INVENTORY_READ,
     INVENTORY_UPDATE,
     INVENTORY_DELETE,
+
+    CASH_REGISTERS_CREATE,
+    CASH_REGISTERS_READ,
+    CASH_REGISTERS_UPDATE,
+    CASH_REGISTERS_DELETE,
+
+    CASH_SESSIONS_OPEN,
+    CASH_SESSIONS_READ,
+    CASH_SESSIONS_CLOSE,
+
+    CASH_TRANSACTIONS_CREATE,
+    CASH_TRANSACTIONS_READ,
 
     PAYMENTS_CREATE,
     PAYMENTS_READ,
