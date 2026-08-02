@@ -10,7 +10,9 @@ from app.modules.company.router import router as company_router
 from app.modules.customer.router import router as customer_router
 from app.modules.employee.router import router as employee_router
 from app.modules.inventory.router import router as inventory_router
+from app.modules.purchase.router import router as purchase_router
 from app.modules.service.router import router as service_router
+from app.modules.supplier.router import router as supplier_router
 from app.modules.user.router import router as user_router
 
 
@@ -28,6 +30,10 @@ api_router.include_router(user_router)
 api_router.include_router(auth_router)
 
 api_router.include_router(customer_router)
+
+api_router.include_router(supplier_router)
+
+api_router.include_router(purchase_router)
 
 api_router.include_router(service_router)
 

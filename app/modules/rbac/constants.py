@@ -70,6 +70,28 @@ CUSTOMERS_DELETE = "customers:delete"
 
 
 # ==========================================================
+# Suppliers Permissions
+# ==========================================================
+
+SUPPLIERS_CREATE = "suppliers:create"
+SUPPLIERS_READ = "suppliers:read"
+SUPPLIERS_UPDATE = "suppliers:update"
+SUPPLIERS_DELETE = "suppliers:delete"
+
+
+# ==========================================================
+# Purchases Permissions
+# ==========================================================
+
+PURCHASES_CREATE = "purchases:create"
+PURCHASES_READ = "purchases:read"
+PURCHASES_UPDATE = "purchases:update"
+PURCHASES_APPROVE = "purchases:approve"
+PURCHASES_CANCEL = "purchases:cancel"
+PURCHASES_RECEIVE = "purchases:receive"
+
+
+# ==========================================================
 # Services Permissions
 # ==========================================================
 
@@ -172,6 +194,18 @@ SYSTEM_PERMISSIONS = [
     CUSTOMERS_READ,
     CUSTOMERS_UPDATE,
     CUSTOMERS_DELETE,
+
+    SUPPLIERS_CREATE,
+    SUPPLIERS_READ,
+    SUPPLIERS_UPDATE,
+    SUPPLIERS_DELETE,
+
+    PURCHASES_CREATE,
+    PURCHASES_READ,
+    PURCHASES_UPDATE,
+    PURCHASES_APPROVE,
+    PURCHASES_CANCEL,
+    PURCHASES_RECEIVE,
 
     SERVICES_CREATE,
     SERVICES_READ,

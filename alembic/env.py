@@ -15,6 +15,8 @@ from app.modules.user import model as user_model  # noqa: F401
 from app.modules.appointment import model as appointment_model  # noqa: F401
 from app.modules.inventory import model as inventory_model  # noqa: F401
 import app.modules.cash_register.model
+from app.modules.supplier import model as supplier_model
+from app.modules.purchase import model as purchase_model
 
 
 config = context.config

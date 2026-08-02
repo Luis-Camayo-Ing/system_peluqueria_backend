@@ -1,0 +1,1 @@
+"""Módulo de compras y recepción de mercancía."""
