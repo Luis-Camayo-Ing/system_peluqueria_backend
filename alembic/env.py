@@ -17,6 +17,7 @@ from app.modules.inventory import model as inventory_model  # noqa: F401
 import app.modules.cash_register.model
 from app.modules.supplier import model as supplier_model
 from app.modules.purchase import model as purchase_model
+from app.modules.sale import model as sale_model  # noqa: F401
 
 
 config = context.config
