@@ -92,6 +92,17 @@ PURCHASES_RECEIVE = "purchases:receive"
 
 
 # ==========================================================
+# Sales Permissions
+# ==========================================================
+
+SALES_CREATE = "sales:create"
+SALES_READ = "sales:read"
+SALES_CANCEL = "sales:cancel"
+SALES_RECEIPT = "sales:receipt"
+SALES_SEND = "sales:send"
+
+
+# ==========================================================
 # Services Permissions
 # ==========================================================
 
@@ -206,6 +217,12 @@ SYSTEM_PERMISSIONS = [
     PURCHASES_APPROVE,
     PURCHASES_CANCEL,
     PURCHASES_RECEIVE,
+
+    SALES_CREATE,
+    SALES_READ,
+    SALES_CANCEL,
+    SALES_RECEIPT,
+    SALES_SEND,
 
     SERVICES_CREATE,
     SERVICES_READ,
