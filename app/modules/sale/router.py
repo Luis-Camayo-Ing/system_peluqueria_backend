@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -13,6 +13,7 @@ from app.modules.rbac.constants import (
     SALES_CANCEL,
     SALES_CREATE,
     SALES_READ,
+    SALES_RECEIPT,
 )
 from app.modules.rbac.dependencies import require_permission
 from app.modules.sale.model import (
@@ -20,6 +21,10 @@ from app.modules.sale.model import (
     SaleStatus,
 )
 from app.modules.sale.repository import SaleRepository
+from app.modules.sale.receipt import (
+    build_sale_receipt_filename,
+    build_sale_receipt_pdf,
+)
 from app.modules.sale.schemas import (
     SaleCancelRequest,
     SaleCreate,
@@ -242,6 +247,82 @@ def get_sale(
         sale_id=sale_id,
         company_id=current_user.company_id,
     )
+
+
+@router.get(
+    "/{sale_id}/receipt.pdf",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {
+                "application/pdf": {},
+            },
+            "description": (
+                "Comprobante interno de venta en PDF."
+            ),
+        },
+    },
+)
+def download_sale_receipt(
+    sale_id: UUID,
+    current_user: User = Depends(
+        require_permission(SALES_RECEIPT)
+    ),
+    sale_service: SaleService = Depends(
+        get_sale_service
+    ),
+    audit_service: AuditService = Depends(
+        get_audit_service
+    ),
+) -> Response:
+    """Generate and download the internal sale receipt."""
+
+    sale = sale_service.get_sale(
+        sale_id=sale_id,
+        company_id=current_user.company_id,
+    )
+
+    pdf_content = build_sale_receipt_pdf(
+        sale
+    )
+
+    filename = build_sale_receipt_filename(
+        sale
+    )
+
+    audit_service.log(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        module="sales",
+        action="download_receipt",
+        entity_type="Sale",
+        entity_id=str(sale.id),
+        description=(
+            "Se generó y descargó el comprobante "
+            "interno de una venta."
+        ),
+        details={
+            "sale_number": sale.sale_number,
+            "status": sale.status.value,
+            "filename": filename,
+            "content_type": "application/pdf",
+            "size_bytes": len(pdf_content),
+            "receipt_type": "internal",
+            "is_electronic_invoice": False,
+        },
+    )
+
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{filename}"'
+            ),
+            "Cache-Control": "private, no-store",
+        },
+    )
+
 
 
 @router.post(
