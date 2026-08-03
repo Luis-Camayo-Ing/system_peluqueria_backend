@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.db.session import get_db
 from app.modules.audit.repository import AuditRepository
 from app.modules.audit.service import AuditService
@@ -14,8 +15,22 @@ from app.modules.rbac.constants import (
     SALES_CREATE,
     SALES_READ,
     SALES_RECEIPT,
+    SALES_SEND,
 )
 from app.modules.rbac.dependencies import require_permission
+from app.modules.sale.delivery import (
+    SmtpReceiptSender,
+    build_default_receipt_message,
+    build_default_receipt_subject,
+    build_default_whatsapp_message,
+    build_whatsapp_url,
+)
+from app.modules.sale.exceptions import (
+    SaleEmailConfigurationException,
+    SaleEmailSendingException,
+    SaleReceiptGenerationException,
+    SaleReceiptRecipientRequiredException,
+)
 from app.modules.sale.model import (
     SaleItemType,
     SaleStatus,
@@ -29,6 +44,10 @@ from app.modules.sale.schemas import (
     SaleCancelRequest,
     SaleCreate,
     SaleListResponse,
+    SaleReceiptEmailRequest,
+    SaleReceiptEmailResponse,
+    SaleReceiptWhatsAppRequest,
+    SaleReceiptWhatsAppResponse,
     SaleResponse,
 )
 from app.modules.sale.service import SaleService
@@ -65,6 +84,14 @@ def get_audit_service(
 
     return AuditService(
         AuditRepository(db),
+    )
+
+
+def get_receipt_sender() -> SmtpReceiptSender:
+    """Build the SMTP receipt sender."""
+
+    return SmtpReceiptSender(
+        settings=settings,
     )
 
 
@@ -323,6 +350,193 @@ def download_sale_receipt(
         },
     )
 
+
+
+@router.post(
+    "/{sale_id}/receipt/email",
+    response_model=SaleReceiptEmailResponse,
+)
+def send_sale_receipt_email(
+    sale_id: UUID,
+    data: SaleReceiptEmailRequest,
+    current_user: User = Depends(
+        require_permission(SALES_SEND)
+    ),
+    sale_service: SaleService = Depends(
+        get_sale_service
+    ),
+    receipt_sender: SmtpReceiptSender = Depends(
+        get_receipt_sender
+    ),
+    audit_service: AuditService = Depends(
+        get_audit_service
+    ),
+) -> SaleReceiptEmailResponse:
+    """Send the internal PDF receipt by email."""
+
+    sale = sale_service.get_sale(
+        sale_id=sale_id,
+        company_id=current_user.company_id,
+    )
+
+    recipient_email = (
+        str(data.recipient_email)
+        if data.recipient_email is not None
+        else sale.customer_email
+    )
+
+    if not recipient_email:
+        raise SaleReceiptRecipientRequiredException()
+
+    subject = (
+        data.subject
+        or build_default_receipt_subject(sale)
+    )
+
+    message = (
+        data.message
+        or build_default_receipt_message(sale)
+    )
+
+    filename = build_sale_receipt_filename(
+        sale
+    )
+
+    try:
+        pdf_content = build_sale_receipt_pdf(
+            sale
+        )
+
+        receipt_sender.send(
+            recipient_email=recipient_email,
+            subject=subject,
+            body=message,
+            pdf_content=pdf_content,
+            filename=filename,
+        )
+
+    except (
+        SaleReceiptGenerationException,
+        SaleEmailConfigurationException,
+        SaleEmailSendingException,
+    ) as exception:
+        audit_service.log(
+            company_id=current_user.company_id,
+            user_id=current_user.id,
+            module="sales",
+            action="send_receipt_email",
+            entity_type="Sale",
+            entity_id=str(sale.id),
+            description=(
+                "No fue posible enviar el comprobante "
+                "interno de una venta por correo."
+            ),
+            details={
+                "sale_number": sale.sale_number,
+                "recipient_email": recipient_email,
+                "filename": filename,
+                "delivery_channel": "email",
+                "error_type": type(exception).__name__,
+            },
+            success=False,
+        )
+
+        raise
+
+    audit_service.log(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        module="sales",
+        action="send_receipt_email",
+        entity_type="Sale",
+        entity_id=str(sale.id),
+        description=(
+            "Se envió el comprobante interno "
+            "de una venta por correo."
+        ),
+        details={
+            "sale_number": sale.sale_number,
+            "recipient_email": recipient_email,
+            "filename": filename,
+            "content_type": "application/pdf",
+            "size_bytes": len(pdf_content),
+            "delivery_channel": "email",
+            "receipt_type": "internal",
+            "is_electronic_invoice": False,
+        },
+        success=True,
+    )
+
+    return SaleReceiptEmailResponse(
+        sale_id=sale.id,
+        sale_number=sale.sale_number,
+        recipient_email=recipient_email,
+        filename=filename,
+    )
+
+
+@router.post(
+    "/{sale_id}/receipt/whatsapp",
+    response_model=SaleReceiptWhatsAppResponse,
+)
+def build_sale_receipt_whatsapp(
+    sale_id: UUID,
+    data: SaleReceiptWhatsAppRequest,
+    current_user: User = Depends(
+        require_permission(SALES_SEND)
+    ),
+    sale_service: SaleService = Depends(
+        get_sale_service
+    ),
+    audit_service: AuditService = Depends(
+        get_audit_service
+    ),
+) -> SaleReceiptWhatsAppResponse:
+    """Build a WhatsApp URL without calling the Meta API."""
+
+    sale = sale_service.get_sale(
+        sale_id=sale_id,
+        company_id=current_user.company_id,
+    )
+
+    message = (
+        data.message
+        or build_default_whatsapp_message(sale)
+    )
+
+    url = build_whatsapp_url(
+        phone_number=data.phone_number,
+        message=message,
+    )
+
+    audit_service.log(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        module="sales",
+        action="build_receipt_whatsapp",
+        entity_type="Sale",
+        entity_id=str(sale.id),
+        description=(
+            "Se generó un enlace para compartir "
+            "el comprobante interno por WhatsApp."
+        ),
+        details={
+            "sale_number": sale.sale_number,
+            "phone_number": data.phone_number,
+            "delivery_channel": "whatsapp",
+            "attachment_included": False,
+            "meta_api_used": False,
+        },
+        success=True,
+    )
+
+    return SaleReceiptWhatsAppResponse(
+        sale_id=sale.id,
+        sale_number=sale.sale_number,
+        phone_number=data.phone_number,
+        message=message,
+        url=url,
+    )
 
 
 @router.post(

@@ -317,6 +317,34 @@ class SaleReceiptGenerationException(HTTPException):
         )
 
 
+class SaleReceiptRecipientRequiredException(
+    HTTPException
+):
+    """Raised when no receipt email recipient is available."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "Debe proporcionar un correo destinatario "
+                "o la venta debe tener un correo del cliente."
+            ),
+        )
+
+
+class SaleEmailConfigurationException(HTTPException):
+    """Raised when SMTP delivery is not configured."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "El servicio de correo no se encuentra "
+                "configurado correctamente."
+            ),
+        )
+
+
 class SaleEmailSendingException(HTTPException):
     """Raised when the receipt email cannot be delivered."""
 

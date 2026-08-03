@@ -1,5 +1,6 @@
 """Pydantic schemas for sales and point-of-sale operations."""
 
+import re
 from datetime import datetime
 from decimal import Decimal
 from typing import Self
@@ -8,6 +9,7 @@ from uuid import UUID
 from pydantic import (
     BaseModel,
     ConfigDict,
+    EmailStr,
     Field,
     field_validator,
     model_validator,
@@ -421,3 +423,121 @@ class SaleListResponse(BaseModel):
 
     total: int
     items: list[SaleResponse]
+
+class SaleReceiptEmailRequest(SaleSchema):
+    """Request used to email an internal sale receipt."""
+
+    recipient_email: EmailStr | None = None
+
+    subject: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=200,
+    )
+
+    message: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=2000,
+    )
+
+    @field_validator("subject")
+    @classmethod
+    def validate_subject(
+        cls,
+        value: str | None,
+    ) -> str | None:
+        """Reject SMTP header injection characters."""
+
+        if value is None:
+            return None
+
+        if "\r" in value or "\n" in value:
+            raise ValueError(
+                "El asunto no puede contener saltos de línea."
+            )
+
+        return value.strip()
+
+    @field_validator("message")
+    @classmethod
+    def normalize_message(
+        cls,
+        value: str | None,
+    ) -> str | None:
+        if value is None:
+            return None
+
+        return value.strip()
+
+
+class SaleReceiptEmailResponse(BaseModel):
+    """Successful receipt email delivery response."""
+
+    sale_id: UUID
+    sale_number: str
+    recipient_email: EmailStr
+    filename: str
+    sent: bool = True
+
+
+class SaleReceiptWhatsAppRequest(SaleSchema):
+    """Request used to build a WhatsApp share URL."""
+
+    phone_number: str = Field(
+        min_length=8,
+        max_length=30,
+        description=(
+            "Número internacional, incluido el código de país."
+        ),
+    )
+
+    message: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=2000,
+    )
+
+    @field_validator("phone_number")
+    @classmethod
+    def normalize_phone_number(
+        cls,
+        value: str,
+    ) -> str:
+        """Normalize the number to the format required by wa.me."""
+
+        normalized = re.sub(
+            r"\D",
+            "",
+            value,
+        )
+
+        if not 8 <= len(normalized) <= 15:
+            raise ValueError(
+                "El número debe contener entre 8 y 15 dígitos "
+                "e incluir el codigo de pais."
+            )
+
+        return normalized
+
+    @field_validator("message")
+    @classmethod
+    def normalize_whatsapp_message(
+        cls,
+        value: str | None,
+    ) -> str | None:
+        if value is None:
+            return None
+
+        return value.strip()
+
+
+class SaleReceiptWhatsAppResponse(BaseModel):
+    """Generated WhatsApp sharing information."""
+
+    sale_id: UUID
+    sale_number: str
+    phone_number: str
+    message: str
+    url: str
+    attachment_included: bool = False
