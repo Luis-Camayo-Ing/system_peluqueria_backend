@@ -20,8 +20,8 @@ from app.modules.audit.service import AuditService
 from app.modules.customer.repository import CustomerRepository
 from app.modules.employee.repository import EmployeeRepository
 from app.modules.rbac.constants import (
+    APPOINTMENTS_CANCEL,
     APPOINTMENTS_CREATE,
-    APPOINTMENTS_DELETE,
     APPOINTMENTS_READ,
     APPOINTMENTS_UPDATE,
 )
@@ -207,7 +207,7 @@ def cancel_appointment(
     appointment_id: UUID,
     data: AppointmentCancel,
     current_user: User = Depends(
-        require_permission(APPOINTMENTS_DELETE)
+        require_permission(APPOINTMENTS_CANCEL)
     ),
     appointment_service: AppointmentService = Depends(
         get_appointment_service

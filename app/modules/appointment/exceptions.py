@@ -28,6 +28,17 @@ class AppointmentAlreadyCancelledException(HTTPException):
         )
 
 
+class AppointmentFinalizedException(HTTPException):
+    def __init__(self, appointment_status: str) -> None:
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "La cita se encuentra en un estado final "
+                f"('{appointment_status}') y no puede modificarse."
+            ),
+        )
+
+
 class InvalidAppointmentStatusException(HTTPException):
     def __init__(
         self,

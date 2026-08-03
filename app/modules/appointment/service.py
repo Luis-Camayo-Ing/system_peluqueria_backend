@@ -4,6 +4,7 @@ from uuid import UUID
 from app.modules.appointment.exceptions import (
     AppointmentAlreadyCancelledException,
     AppointmentConflictException,
+    AppointmentFinalizedException,
     AppointmentNotFoundException,
     AppointmentRelatedEntityInactiveException,
     AppointmentRelatedEntityNotFoundException,
@@ -49,6 +50,12 @@ class AppointmentService:
         AppointmentStatus.COMPLETED: set(),
         AppointmentStatus.CANCELLED: set(),
         AppointmentStatus.NO_SHOW: set(),
+    }
+
+    TERMINAL_STATUSES = {
+        AppointmentStatus.COMPLETED,
+        AppointmentStatus.CANCELLED,
+        AppointmentStatus.NO_SHOW,
     }
 
     def __init__(
@@ -185,8 +192,10 @@ class AppointmentService:
             company_id=company_id,
         )
 
-        if appointment.status == AppointmentStatus.CANCELLED:
-            raise AppointmentAlreadyCancelledException()
+        if appointment.status in self.TERMINAL_STATUSES:
+            raise AppointmentFinalizedException(
+                appointment_status=appointment.status.value,
+            )
 
         update_data = data.model_dump(exclude_unset=True)
 
@@ -436,7 +445,7 @@ class AppointmentService:
         if new_status not in allowed_statuses:
             raise InvalidAppointmentStatusException(
                 detail=(
-                    f"No se permite cambiar una cita de "
+                    "No se permite cambiar una cita de "
                     f"'{current_status.value}' a "
                     f"'{new_status.value}'."
                 ),

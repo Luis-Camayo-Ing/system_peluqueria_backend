@@ -119,6 +119,7 @@ SERVICES_DELETE = "services:delete"
 APPOINTMENTS_CREATE = "appointments:create"
 APPOINTMENTS_READ = "appointments:read"
 APPOINTMENTS_UPDATE = "appointments:update"
+APPOINTMENTS_CANCEL = "appointments:cancel"
 APPOINTMENTS_DELETE = "appointments:delete"
 
 
@@ -232,6 +233,7 @@ SYSTEM_PERMISSIONS = [
     APPOINTMENTS_CREATE,
     APPOINTMENTS_READ,
     APPOINTMENTS_UPDATE,
+    APPOINTMENTS_CANCEL,
     APPOINTMENTS_DELETE,
 
     INVENTORY_CREATE,
