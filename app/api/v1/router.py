@@ -6,6 +6,9 @@ from app.modules.audit.router import router as audit_router
 from app.modules.auth.router import router as auth_router
 from app.modules.cash_register.router import router as cash_register_router
 from app.modules.company.router import router as company_router
+from app.modules.configuration.router import (
+    router as configuration_router,
+)
 from app.modules.customer.router import router as customer_router
 from app.modules.dashboard.router import router as dashboard_router
 from app.modules.employee.router import router as employee_router
@@ -17,7 +20,9 @@ from app.modules.service.router import router as service_router
 from app.modules.supplier.router import router as supplier_router
 from app.modules.user.router import router as user_router
 
+
 api_router = APIRouter()
+
 
 api_router.include_router(
     salud.router,
@@ -25,6 +30,8 @@ api_router.include_router(
 )
 
 api_router.include_router(company_router)
+
+api_router.include_router(configuration_router)
 
 api_router.include_router(user_router)
 

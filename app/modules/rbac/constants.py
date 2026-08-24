@@ -169,6 +169,14 @@ DASHBOARD_VIEW = "dashboard:view"
 
 
 # ==========================================================
+# Configuration Permissions
+# ==========================================================
+
+CONFIGURATION_READ = "configuration:read"
+CONFIGURATION_UPDATE = "configuration:update"
+
+
+# ==========================================================
 # Audit Permissions
 # ==========================================================
 
@@ -260,6 +268,9 @@ SYSTEM_PERMISSIONS = [
 
     REPORTS_VIEW,
     DASHBOARD_VIEW,
+
+    CONFIGURATION_READ,
+    CONFIGURATION_UPDATE,
 
     AUDIT_READ,
 ]
