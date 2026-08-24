@@ -1,0 +1,1 @@
+"""Company configuration module for ERP Beauty Pro."""
