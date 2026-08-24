@@ -7,6 +7,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.cash_register.router import router as cash_register_router
 from app.modules.company.router import router as company_router
 from app.modules.customer.router import router as customer_router
+from app.modules.dashboard.router import router as dashboard_router
 from app.modules.employee.router import router as employee_router
 from app.modules.inventory.router import router as inventory_router
 from app.modules.purchase.router import router as purchase_router
@@ -30,6 +31,8 @@ api_router.include_router(user_router)
 api_router.include_router(auth_router)
 
 api_router.include_router(customer_router)
+
+api_router.include_router(dashboard_router)
 
 api_router.include_router(supplier_router)
 
