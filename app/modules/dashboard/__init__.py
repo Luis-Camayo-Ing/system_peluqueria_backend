@@ -1,0 +1,1 @@
+"""Operational dashboard for ERP Beauty Pro."""
