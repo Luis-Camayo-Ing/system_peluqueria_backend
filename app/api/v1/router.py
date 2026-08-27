@@ -19,6 +19,7 @@ from app.modules.sale.router import router as sale_router
 from app.modules.service.router import router as service_router
 from app.modules.supplier.router import router as supplier_router
 from app.modules.user.router import router as user_router
+from app.modules.rbac.router import router as rbac_router
 
 
 api_router = APIRouter()
@@ -64,3 +65,5 @@ api_router.include_router(appointment_router)
 api_router.include_router(inventory_router)
 
 api_router.include_router(cash_register_router)
+
+api_router.include_router(rbac_router)
