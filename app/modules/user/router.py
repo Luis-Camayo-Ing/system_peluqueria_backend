@@ -5,6 +5,13 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.modules.auth.dependencies import get_current_user
+from app.modules.rbac.constants import (
+    USERS_CREATE,
+    USERS_DELETE,
+    USERS_READ,
+    USERS_UPDATE,
+)
+from app.modules.rbac.dependencies import require_permission
 from app.modules.user.model import User
 from app.modules.user.repository import UserRepository
 from app.modules.user.schemas import (
@@ -36,9 +43,15 @@ def get_user_service(
 )
 def create_user(
     data: UserCreate,
+    current_user: User = Depends(
+        require_permission(USERS_CREATE)
+    ),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
-    return service.create_user(data)
+    return service.create_user(
+        data,
+        company_id=current_user.company_id,
+    )
 
 
 @router.get(
@@ -46,9 +59,12 @@ def create_user(
     response_model=UserListResponse,
 )
 def get_users(
+    current_user: User = Depends(
+        require_permission(USERS_READ)
+    ),
     service: UserService = Depends(get_user_service),
 ) -> UserListResponse:
-    users = service.get_users()
+    users = service.get_users(current_user.company_id)
 
     return UserListResponse(
         items=users,
@@ -73,9 +89,12 @@ def get_my_profile(
 )
 def get_user(
     user_id: UUID,
+    current_user: User = Depends(
+        require_permission(USERS_READ)
+    ),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
-    return service.get_user(user_id)
+    return service.get_user(user_id, current_user.company_id)
 
 
 @router.put(
@@ -85,9 +104,16 @@ def get_user(
 def update_user(
     user_id: UUID,
     data: UserUpdate,
+    current_user: User = Depends(
+        require_permission(USERS_UPDATE)
+    ),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
-    return service.update_user(user_id, data)
+    return service.update_user(
+        user_id,
+        data,
+        company_id=current_user.company_id,
+    )
 
 
 @router.delete(
@@ -96,9 +122,15 @@ def update_user(
 )
 def delete_user(
     user_id: UUID,
+    current_user: User = Depends(
+        require_permission(USERS_DELETE)
+    ),
     service: UserService = Depends(get_user_service),
 ) -> Response:
-    service.delete_user(user_id)
+    service.delete_user(
+        user_id,
+        company_id=current_user.company_id,
+    )
 
     return Response(
         status_code=status.HTTP_204_NO_CONTENT,

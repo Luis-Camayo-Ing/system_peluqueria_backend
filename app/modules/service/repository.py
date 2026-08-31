@@ -16,10 +16,19 @@ class ServiceRepository:
         self.db.refresh(service)
         return service
 
-    def get_by_id(self, service_id: uuid.UUID) -> Service | None:
+    def get_by_id(
+        self,
+        service_id: uuid.UUID,
+        company_id: uuid.UUID | None = None,
+    ) -> Service | None:
         statement = select(Service).where(
             Service.id == service_id
         )
+
+        if company_id is not None:
+            statement = statement.where(
+                Service.company_id == company_id
+            )
 
         return self.db.scalar(statement)
 

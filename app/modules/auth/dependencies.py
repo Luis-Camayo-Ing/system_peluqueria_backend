@@ -4,8 +4,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from app.dependencies.database import get_db
 from app.modules.auth.security import decode_access_token
+from app.modules.user.exceptions import UserNotFoundError
 from app.modules.user.model import User
 from app.modules.user.repository import UserRepository
 from app.modules.user.service import UserService
@@ -29,11 +29,13 @@ def get_current_user(
     try:
         payload = decode_access_token(token)
         user_id = payload.get("sub")
+        company_id = payload.get("company_id")
 
-        if not user_id:
+        if not user_id or not company_id:
             raise credentials_exception
 
         parsed_user_id = UUID(user_id)
+        parsed_company_id = UUID(company_id)
 
     except (ValueError, TypeError):
         raise credentials_exception
@@ -42,8 +44,8 @@ def get_current_user(
     service = UserService(repository)
 
     try:
-        user = service.get_user(parsed_user_id)
-    except Exception:
+        user = service.get_user(parsed_user_id, parsed_company_id)
+    except UserNotFoundError:
         raise credentials_exception
 
     if not user.is_active:

@@ -4,6 +4,7 @@ from app.modules.user.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
     UserAlreadyExistsError,
+    UserCompanyScopeError,
     UserNotFoundError,
 )
 from app.modules.user.model import User
@@ -16,7 +17,14 @@ class UserService:
     def __init__(self, repository: UserRepository):
         self.repository = repository
 
-    def create_user(self, data: UserCreate) -> User:
+    def create_user(
+        self,
+        data: UserCreate,
+        company_id: UUID | None = None,
+    ) -> User:
+        if company_id is not None and data.company_id != company_id:
+            raise UserCompanyScopeError()
+
         existing_user = self.repository.get_by_email(str(data.email))
 
         if existing_user:
@@ -30,23 +38,31 @@ class UserService:
 
         return self.repository.create(user)
 
-    def get_user(self, user_id: UUID) -> User:
-        user = self.repository.get_by_id(user_id)
+    def get_user(
+        self,
+        user_id: UUID,
+        company_id: UUID | None = None,
+    ) -> User:
+        user = self.repository.get_by_id(user_id, company_id)
 
         if not user:
             raise UserNotFoundError()
 
         return user
 
-    def get_users(self) -> list[User]:
-        return self.repository.get_all()
+    def get_users(
+        self,
+        company_id: UUID | None = None,
+    ) -> list[User]:
+        return self.repository.get_all(company_id)
 
     def update_user(
         self,
         user_id: UUID,
         data: UserUpdate,
+        company_id: UUID | None = None,
     ) -> User:
-        user = self.get_user(user_id)
+        user = self.get_user(user_id, company_id)
 
         update_data = data.model_dump(exclude_unset=True)
 
@@ -72,8 +88,12 @@ class UserService:
 
         return self.repository.update(user)
 
-    def delete_user(self, user_id: UUID) -> None:
-        user = self.get_user(user_id)
+    def delete_user(
+        self,
+        user_id: UUID,
+        company_id: UUID | None = None,
+    ) -> None:
+        user = self.get_user(user_id, company_id)
         self.repository.delete(user)
 
     def authenticate_user(

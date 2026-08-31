@@ -8,12 +8,16 @@ from app.modules.rbac.exceptions import (
     PermissionAlreadyAssignedException,
     PermissionAlreadyExistsException,
     PermissionNotFoundException,
+    RBACCompanyScopeException,
     RoleAlreadyExistsException,
     RoleNotFoundException,
     SystemRoleDeletionException,
     SystemRoleModificationException,
+    SystemPermissionDeletionException,
+    SystemPermissionModificationException,
     UserRoleAlreadyAssignedException,
 )
+from app.modules.rbac.constants import SYSTEM_PERMISSIONS
 from app.modules.rbac.model import Permission, Role
 from app.modules.rbac.repository import RBACRepository
 from app.modules.rbac.schemas import (
@@ -33,7 +37,14 @@ class RBACService:
     # Roles
     # ==========================================================
 
-    def create_role(self, data: RoleCreate) -> Role:
+    def create_role(
+        self,
+        data: RoleCreate,
+        company_id: UUID,
+    ) -> Role:
+
+        if data.company_id != company_id:
+            raise RBACCompanyScopeException()
 
         existing = self.repository.get_role_by_name(
             data.company_id,
@@ -47,7 +58,7 @@ class RBACService:
             company_id=data.company_id,
             name=data.name,
             description=data.description,
-            is_system_role=data.is_system_role,
+            is_system_role=False,
             is_active=data.is_active,
         )
 
@@ -69,9 +80,13 @@ class RBACService:
     def get_role(
         self,
         role_id: UUID,
+        company_id: UUID,
     ) -> Role:
 
-        role = self.repository.get_role_by_id(role_id)
+        role = self.repository.get_role_by_id(
+            role_id,
+            company_id,
+        )
 
         if role is None:
             raise RoleNotFoundException()
@@ -91,9 +106,10 @@ class RBACService:
         self,
         role_id: UUID,
         data: RoleUpdate,
+        company_id: UUID,
     ) -> Role:
 
-        role = self.get_role(role_id)
+        role = self.get_role(role_id, company_id)
 
         if role.is_system_role:
             raise SystemRoleModificationException()
@@ -126,9 +142,10 @@ class RBACService:
     def delete_role(
         self,
         role_id: UUID,
+        company_id: UUID,
     ) -> None:
 
-        role = self.get_role(role_id)
+        role = self.get_role(role_id, company_id)
 
         if role.is_system_role:
             raise SystemRoleDeletionException()
@@ -187,6 +204,9 @@ class RBACService:
 
         permission = self.get_permission(permission_id)
 
+        if permission.name in SYSTEM_PERMISSIONS:
+            raise SystemPermissionModificationException()
+
         update_data = data.model_dump(exclude_unset=True)
 
         for key, value in update_data.items():
@@ -201,6 +221,9 @@ class RBACService:
 
         permission = self.get_permission(permission_id)
 
+        if permission.name in SYSTEM_PERMISSIONS:
+            raise SystemPermissionDeletionException()
+
         self.repository.delete_permission(permission)
 
     # ==========================================================
@@ -211,14 +234,18 @@ class RBACService:
         self,
         user_id: UUID,
         role_id: UUID,
+        company_id: UUID,
     ) -> None:
 
-        user = self.repository.get_user_by_id(user_id)
+        user = self.repository.get_user_by_id(
+            user_id,
+            company_id,
+        )
 
         if user is None:
-            raise ValueError("User not found.")
+            raise RBACCompanyScopeException()
 
-        role = self.get_role(role_id)
+        role = self.get_role(role_id, company_id)
 
         if role in user.roles:
             raise UserRoleAlreadyAssignedException()
@@ -232,9 +259,13 @@ class RBACService:
         self,
         role_id: UUID,
         permission_id: UUID,
+        company_id: UUID,
     ) -> None:
 
-        role = self.get_role(role_id)
+        role = self.get_role(role_id, company_id)
+
+        if role.is_system_role:
+            raise SystemRoleModificationException()
 
         permission = self.get_permission(
             permission_id,

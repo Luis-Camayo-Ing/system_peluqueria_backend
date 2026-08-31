@@ -12,7 +12,10 @@ router = APIRouter()
 
 @router.get("/salud")
 def comprobar_salud() -> dict[str, str]:
-    return {"estado": "correcto"}
+    return {
+        "estado": "correcto",
+        "servicio": "backend",
+    }
 
 
 @router.get("/salud/base-datos")
