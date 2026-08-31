@@ -22,7 +22,11 @@ class EmployeeRepository:
 
         return employee
 
-    def get_by_id(self, employee_id: UUID) -> Employee | None:
+    def get_by_id(
+        self,
+        employee_id: UUID,
+        company_id: UUID | None = None,
+    ) -> Employee | None:
         """
         Busca un empleado por su identificador.
         """
@@ -30,6 +34,11 @@ class EmployeeRepository:
         statement = select(Employee).where(
             Employee.id == employee_id
         )
+
+        if company_id is not None:
+            statement = statement.where(
+                Employee.company_id == company_id
+            )
 
         return self.db.scalar(statement)
 

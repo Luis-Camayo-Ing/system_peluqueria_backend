@@ -27,8 +27,16 @@ class RBACRepository:
     def get_role_by_id(
         self,
         role_id: UUID,
+        company_id: UUID | None = None,
     ) -> Role | None:
-        return self.db.get(Role, role_id)
+        statement = select(Role).where(Role.id == role_id)
+
+        if company_id is not None:
+            statement = statement.where(
+                Role.company_id == company_id
+            )
+
+        return self.db.scalar(statement)
 
     def get_role_by_name(
         self,
@@ -133,8 +141,16 @@ class RBACRepository:
     def get_user_by_id(
         self,
         user_id: UUID,
+        company_id: UUID | None = None,
     ) -> User | None:
-        return self.db.get(User, user_id)
+        statement = select(User).where(User.id == user_id)
+
+        if company_id is not None:
+            statement = statement.where(
+                User.company_id == company_id
+            )
+
+        return self.db.scalar(statement)
 
     # ==========================================================
     # Assignments

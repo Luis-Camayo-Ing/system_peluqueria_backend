@@ -23,7 +23,14 @@ class EmployeeService:
         self.employee_repository = employee_repository
         self.company_repository = company_repository
 
-    def create(self, data: EmployeeCreate) -> Employee:
+    def create(
+        self,
+        data: EmployeeCreate,
+        company_id: UUID | None = None,
+    ) -> Employee:
+
+        if company_id is not None and data.company_id != company_id:
+            raise ValueError("La empresa no existe.")
 
         company = self.company_repository.get_by_id(data.company_id)
 
@@ -86,9 +93,16 @@ class EmployeeService:
 
         return self.employee_repository.create(employee)
 
-    def get_by_id(self, employee_id: UUID) -> Employee:
+    def get_by_id(
+        self,
+        employee_id: UUID,
+        company_id: UUID | None = None,
+    ) -> Employee:
 
-        employee = self.employee_repository.get_by_id(employee_id)
+        employee = self.employee_repository.get_by_id(
+            employee_id,
+            company_id,
+        )
 
         if employee is None:
             raise EmployeeNotFoundException()
@@ -112,9 +126,10 @@ class EmployeeService:
         self,
         employee_id: UUID,
         data: EmployeeUpdate,
+        company_id: UUID | None = None,
     ) -> Employee:
 
-        employee = self.get_by_id(employee_id)
+        employee = self.get_by_id(employee_id, company_id)
 
         values = data.model_dump(exclude_unset=True)
 
@@ -179,8 +194,9 @@ class EmployeeService:
     def delete(
         self,
         employee_id: UUID,
+        company_id: UUID | None = None,
     ) -> None:
 
-        employee = self.get_by_id(employee_id)
+        employee = self.get_by_id(employee_id, company_id)
 
         self.employee_repository.delete(employee)

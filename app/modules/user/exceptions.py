@@ -28,3 +28,14 @@ class InactiveUserError(Exception):
     def __init__(self, message: str = "El usuario está inactivo"):
         self.message = message
         super().__init__(self.message)
+
+
+class UserCompanyScopeError(Exception):
+    """Se lanza cuando un usuario intenta operar sobre otra empresa."""
+
+    def __init__(
+        self,
+        message: str = "El usuario no pertenece a la empresa autenticada",
+    ):
+        self.message = message
+        super().__init__(self.message)

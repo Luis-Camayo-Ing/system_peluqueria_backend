@@ -5,14 +5,20 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.db.base import Base
+from app.modules.appointment import model as appointment_model  # noqa: F401
 from app.modules.audit import model as audit_model  # noqa: F401
+from app.modules.cash_register import model as cash_register_model  # noqa: F401
 from app.modules.company import model as company_model  # noqa: F401
+from app.modules.configuration import model as configuration_model  # noqa: F401
 from app.modules.customer import model as customer_model  # noqa: F401
 from app.modules.employee import model as employee_model  # noqa: F401
+from app.modules.inventory import model as inventory_model  # noqa: F401
+from app.modules.purchase import model as purchase_model  # noqa: F401
 from app.modules.rbac import model as rbac_model  # noqa: F401
+from app.modules.sale import model as sale_model  # noqa: F401
 from app.modules.service import model as service_model  # noqa: F401
+from app.modules.supplier import model as supplier_model  # noqa: F401
 from app.modules.user import model as user_model  # noqa: F401
-from app.modules.appointment.model import Appointment
 
 
 config = context.config

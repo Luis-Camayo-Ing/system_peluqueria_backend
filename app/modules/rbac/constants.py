@@ -70,6 +70,39 @@ CUSTOMERS_DELETE = "customers:delete"
 
 
 # ==========================================================
+# Suppliers Permissions
+# ==========================================================
+
+SUPPLIERS_CREATE = "suppliers:create"
+SUPPLIERS_READ = "suppliers:read"
+SUPPLIERS_UPDATE = "suppliers:update"
+SUPPLIERS_DELETE = "suppliers:delete"
+
+
+# ==========================================================
+# Purchases Permissions
+# ==========================================================
+
+PURCHASES_CREATE = "purchases:create"
+PURCHASES_READ = "purchases:read"
+PURCHASES_UPDATE = "purchases:update"
+PURCHASES_APPROVE = "purchases:approve"
+PURCHASES_CANCEL = "purchases:cancel"
+PURCHASES_RECEIVE = "purchases:receive"
+
+
+# ==========================================================
+# Sales Permissions
+# ==========================================================
+
+SALES_CREATE = "sales:create"
+SALES_READ = "sales:read"
+SALES_CANCEL = "sales:cancel"
+SALES_RECEIPT = "sales:receipt"
+SALES_SEND = "sales:send"
+
+
+# ==========================================================
 # Services Permissions
 # ==========================================================
 
@@ -86,6 +119,7 @@ SERVICES_DELETE = "services:delete"
 APPOINTMENTS_CREATE = "appointments:create"
 APPOINTMENTS_READ = "appointments:read"
 APPOINTMENTS_UPDATE = "appointments:update"
+APPOINTMENTS_CANCEL = "appointments:cancel"
 APPOINTMENTS_DELETE = "appointments:delete"
 
 
@@ -97,6 +131,23 @@ INVENTORY_CREATE = "inventory:create"
 INVENTORY_READ = "inventory:read"
 INVENTORY_UPDATE = "inventory:update"
 INVENTORY_DELETE = "inventory:delete"
+
+
+# ==========================================================
+# Cash Register Permissions
+# ==========================================================
+
+CASH_REGISTERS_CREATE = "cash_registers:create"
+CASH_REGISTERS_READ = "cash_registers:read"
+CASH_REGISTERS_UPDATE = "cash_registers:update"
+CASH_REGISTERS_DELETE = "cash_registers:delete"
+
+CASH_SESSIONS_OPEN = "cash_sessions:open"
+CASH_SESSIONS_READ = "cash_sessions:read"
+CASH_SESSIONS_CLOSE = "cash_sessions:close"
+
+CASH_TRANSACTIONS_CREATE = "cash_transactions:create"
+CASH_TRANSACTIONS_READ = "cash_transactions:read"
 
 
 # ==========================================================
@@ -115,6 +166,14 @@ PAYMENTS_DELETE = "payments:delete"
 
 REPORTS_VIEW = "reports:view"
 DASHBOARD_VIEW = "dashboard:view"
+
+
+# ==========================================================
+# Configuration Permissions
+# ==========================================================
+
+CONFIGURATION_READ = "configuration:read"
+CONFIGURATION_UPDATE = "configuration:update"
 
 
 # ==========================================================
@@ -156,6 +215,24 @@ SYSTEM_PERMISSIONS = [
     CUSTOMERS_UPDATE,
     CUSTOMERS_DELETE,
 
+    SUPPLIERS_CREATE,
+    SUPPLIERS_READ,
+    SUPPLIERS_UPDATE,
+    SUPPLIERS_DELETE,
+
+    PURCHASES_CREATE,
+    PURCHASES_READ,
+    PURCHASES_UPDATE,
+    PURCHASES_APPROVE,
+    PURCHASES_CANCEL,
+    PURCHASES_RECEIVE,
+
+    SALES_CREATE,
+    SALES_READ,
+    SALES_CANCEL,
+    SALES_RECEIPT,
+    SALES_SEND,
+
     SERVICES_CREATE,
     SERVICES_READ,
     SERVICES_UPDATE,
@@ -164,12 +241,25 @@ SYSTEM_PERMISSIONS = [
     APPOINTMENTS_CREATE,
     APPOINTMENTS_READ,
     APPOINTMENTS_UPDATE,
+    APPOINTMENTS_CANCEL,
     APPOINTMENTS_DELETE,
 
     INVENTORY_CREATE,
     INVENTORY_READ,
     INVENTORY_UPDATE,
     INVENTORY_DELETE,
+
+    CASH_REGISTERS_CREATE,
+    CASH_REGISTERS_READ,
+    CASH_REGISTERS_UPDATE,
+    CASH_REGISTERS_DELETE,
+
+    CASH_SESSIONS_OPEN,
+    CASH_SESSIONS_READ,
+    CASH_SESSIONS_CLOSE,
+
+    CASH_TRANSACTIONS_CREATE,
+    CASH_TRANSACTIONS_READ,
 
     PAYMENTS_CREATE,
     PAYMENTS_READ,
@@ -178,6 +268,9 @@ SYSTEM_PERMISSIONS = [
 
     REPORTS_VIEW,
     DASHBOARD_VIEW,
+
+    CONFIGURATION_READ,
+    CONFIGURATION_UPDATE,
 
     AUDIT_READ,
 ]

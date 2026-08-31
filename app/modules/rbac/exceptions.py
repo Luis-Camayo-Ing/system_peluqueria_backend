@@ -51,6 +51,28 @@ class PermissionAlreadyExistsException(RBACException):
         )
 
 
+class SystemPermissionModificationException(RBACException):
+    def __init__(self):
+        super().__init__(
+            "System permissions cannot be modified."
+        )
+
+
+class SystemPermissionDeletionException(RBACException):
+    def __init__(self):
+        super().__init__(
+            "System permissions cannot be deleted."
+        )
+
+
+class RBACCompanyScopeException(RBACException):
+    def __init__(self):
+        super().__init__(
+            "The requested RBAC resource does not belong "
+            "to the authenticated company."
+        )
+
+
 # ==========================================================
 # Assignment Exceptions
 # ==========================================================

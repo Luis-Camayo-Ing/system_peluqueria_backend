@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.modules.auth.dependencies import get_current_user
 from app.modules.customer.repository import CustomerRepository
 from app.modules.customer.schemas import (
     CustomerCreate,
@@ -13,6 +12,12 @@ from app.modules.customer.schemas import (
     CustomerUpdate,
 )
 from app.modules.customer.service import CustomerService
+from app.modules.rbac.constants import (
+    CUSTOMERS_CREATE,
+    CUSTOMERS_READ,
+    CUSTOMERS_UPDATE,
+)
+from app.modules.rbac.dependencies import require_permission
 from app.modules.user.model import User
 
 
@@ -37,7 +42,9 @@ def get_customer_service(
 )
 def create_customer(
     data: CustomerCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_permission(CUSTOMERS_CREATE)
+    ),
     service: CustomerService = Depends(get_customer_service),
 ):
     return service.create_customer(
@@ -66,7 +73,9 @@ def list_customers(
         max_length=100,
     ),
     is_active: bool | None = Query(default=None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_permission(CUSTOMERS_READ)
+    ),
     service: CustomerService = Depends(get_customer_service),
 ):
     return service.list_customers(
@@ -84,7 +93,9 @@ def list_customers(
 )
 def get_customer(
     customer_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_permission(CUSTOMERS_READ)
+    ),
     service: CustomerService = Depends(get_customer_service),
 ):
     return service.get_customer(
@@ -100,7 +111,9 @@ def get_customer(
 def update_customer(
     customer_id: UUID,
     data: CustomerUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_permission(CUSTOMERS_UPDATE)
+    ),
     service: CustomerService = Depends(get_customer_service),
 ):
     return service.update_customer(

@@ -1,0 +1,1 @@
+"""Read-only business reports for ERP Beauty Pro."""
