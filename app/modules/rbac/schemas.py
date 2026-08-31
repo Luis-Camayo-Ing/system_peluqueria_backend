@@ -68,18 +68,20 @@ class RoleBase(BaseModel):
         max_length=255,
     )
 
-    is_system_role: bool = False
-
     is_active: bool = True
 
 
 class RoleCreate(RoleBase):
+    model_config = ConfigDict(extra="forbid")
+
     permission_ids: list[UUID] = Field(
         default_factory=list,
     )
 
 
 class RoleUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str | None = Field(
         default=None,
         min_length=3,
@@ -87,8 +89,6 @@ class RoleUpdate(BaseModel):
     )
 
     description: str | None = None
-
-    is_system_role: bool | None = None
 
     is_active: bool | None = None
 
@@ -99,6 +99,7 @@ class RoleResponse(RoleBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    is_system_role: bool
     created_at: datetime
     updated_at: datetime
 

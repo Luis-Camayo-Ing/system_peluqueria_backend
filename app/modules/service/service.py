@@ -26,7 +26,11 @@ class ServiceService:
     def create(
         self,
         data: ServiceCreate,
+        company_id: uuid.UUID | None = None,
     ) -> Service:
+        if company_id is not None and data.company_id != company_id:
+            raise CompanyNotFoundForServiceError()
+
         company = self.company_repository.get_by_id(
             data.company_id
         )
@@ -51,8 +55,12 @@ class ServiceService:
     def get_by_id(
         self,
         service_id: uuid.UUID,
+        company_id: uuid.UUID | None = None,
     ) -> Service:
-        service = self.repository.get_by_id(service_id)
+        service = self.repository.get_by_id(
+            service_id,
+            company_id,
+        )
 
         if service is None:
             raise ServiceNotFoundError()
@@ -76,8 +84,9 @@ class ServiceService:
         self,
         service_id: uuid.UUID,
         data: ServiceUpdate,
+        company_id: uuid.UUID | None = None,
     ) -> Service:
-        service = self.get_by_id(service_id)
+        service = self.get_by_id(service_id, company_id)
 
         update_data = data.model_dump(
             exclude_unset=True
@@ -103,6 +112,7 @@ class ServiceService:
     def delete(
         self,
         service_id: uuid.UUID,
+        company_id: uuid.UUID | None = None,
     ) -> None:
-        service = self.get_by_id(service_id)
+        service = self.get_by_id(service_id, company_id)
         self.repository.delete(service)

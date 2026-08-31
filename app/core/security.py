@@ -1,32 +1,9 @@
-from datetime import UTC, datetime, timedelta
-from uuid import UUID
+"""Compatibility exports for the canonical authentication security module."""
 
-import jwt
-
-from app.core.config import settings
-
-
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+from app.modules.auth.security import (
+    create_access_token,
+    decode_access_token,
+)
 
 
-def create_access_token(
-    user_id: UUID,
-    company_id: UUID,
-) -> str:
-    expiration = datetime.now(UTC) + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-
-    payload = {
-        "sub": str(user_id),
-        "company_id": str(company_id),
-        "iat": datetime.now(UTC),
-        "exp": expiration,
-    }
-
-    return jwt.encode(
-        payload,
-        settings.secret_key,
-        algorithm=ALGORITHM,
-    )
+__all__ = ["create_access_token", "decode_access_token"]

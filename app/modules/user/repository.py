@@ -17,8 +17,17 @@ class UserRepository:
 
         return user
 
-    def get_by_id(self, user_id: UUID) -> User | None:
+    def get_by_id(
+        self,
+        user_id: UUID,
+        company_id: UUID | None = None,
+    ) -> User | None:
         statement = select(User).where(User.id == user_id)
+
+        if company_id is not None:
+            statement = statement.where(
+                User.company_id == company_id
+            )
 
         return self.db.scalar(statement)
 
@@ -27,8 +36,16 @@ class UserRepository:
 
         return self.db.scalar(statement)
 
-    def get_all(self) -> list[User]:
+    def get_all(
+        self,
+        company_id: UUID | None = None,
+    ) -> list[User]:
         statement = select(User).order_by(User.created_at.desc())
+
+        if company_id is not None:
+            statement = statement.where(
+                User.company_id == company_id
+            )
 
         return list(self.db.scalars(statement).all())
 

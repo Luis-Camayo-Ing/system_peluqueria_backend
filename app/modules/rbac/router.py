@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.modules.auth.dependencies import get_current_user
 from app.modules.rbac.constants import (
     PERMISSIONS_ASSIGN,
     PERMISSIONS_CREATE,
@@ -19,6 +20,7 @@ from app.modules.rbac.constants import (
     ROLES_UPDATE,
 )
 from app.modules.rbac.dependencies import require_permission
+from app.modules.rbac.exceptions import RBACCompanyScopeException
 from app.modules.rbac.schemas import (
     AssignPermissionSchema,
     AssignRoleSchema,
@@ -30,6 +32,7 @@ from app.modules.rbac.schemas import (
     RoleUpdate,
 )
 from app.modules.rbac.service import RBACService
+from app.modules.user.model import User
 
 
 router = APIRouter()
@@ -51,9 +54,13 @@ router = APIRouter()
 )
 def create_role(
     data: RoleCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RoleResponse:
-    return RBACService(db).create_role(data)
+    return RBACService(db).create_role(
+        data,
+        company_id=current_user.company_id,
+    )
 
 
 @router.get(
@@ -67,8 +74,12 @@ def create_role(
 )
 def get_roles(
     company_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[RoleResponse]:
+    if company_id != current_user.company_id:
+        raise RBACCompanyScopeException()
+
     return RBACService(db).get_roles_by_company(company_id)
 
 
@@ -83,9 +94,13 @@ def get_roles(
 )
 def get_role(
     role_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RoleResponse:
-    return RBACService(db).get_role(role_id)
+    return RBACService(db).get_role(
+        role_id,
+        company_id=current_user.company_id,
+    )
 
 
 @router.put(
@@ -100,11 +115,13 @@ def get_role(
 def update_role(
     role_id: UUID,
     data: RoleUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RoleResponse:
     return RBACService(db).update_role(
         role_id=role_id,
         data=data,
+        company_id=current_user.company_id,
     )
 
 
@@ -119,9 +136,13 @@ def update_role(
 )
 def delete_role(
     role_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
-    RBACService(db).delete_role(role_id)
+    RBACService(db).delete_role(
+        role_id,
+        company_id=current_user.company_id,
+    )
 
     return Response(
         status_code=status.HTTP_204_NO_CONTENT,
@@ -144,6 +165,7 @@ def delete_role(
 )
 def create_permission(
     data: PermissionCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PermissionResponse:
     return RBACService(db).create_permission(data)
@@ -159,6 +181,7 @@ def create_permission(
     ],
 )
 def get_permissions(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[PermissionResponse]:
     return RBACService(db).get_permissions()
@@ -176,6 +199,7 @@ def get_permissions(
 def update_permission(
     permission_id: UUID,
     data: PermissionUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PermissionResponse:
     return RBACService(db).update_permission(
@@ -195,6 +219,7 @@ def update_permission(
 )
 def delete_permission(
     permission_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
     RBACService(db).delete_permission(permission_id)
@@ -219,11 +244,13 @@ def delete_permission(
 )
 def assign_role(
     data: AssignRoleSchema,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
     RBACService(db).assign_role_to_user(
         user_id=data.user_id,
         role_id=data.role_id,
+        company_id=current_user.company_id,
     )
 
     return Response(
@@ -242,11 +269,13 @@ def assign_role(
 )
 def assign_permission(
     data: AssignPermissionSchema,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
     RBACService(db).assign_permission_to_role(
         role_id=data.role_id,
         permission_id=data.permission_id,
+        company_id=current_user.company_id,
     )
 
     return Response(

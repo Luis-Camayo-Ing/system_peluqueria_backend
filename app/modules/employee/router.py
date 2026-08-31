@@ -19,6 +19,14 @@ from app.modules.employee.schemas import (
     EmployeeUpdate,
 )
 from app.modules.employee.service import EmployeeService
+from app.modules.rbac.constants import (
+    EMPLOYEES_CREATE,
+    EMPLOYEES_DELETE,
+    EMPLOYEES_READ,
+    EMPLOYEES_UPDATE,
+)
+from app.modules.rbac.dependencies import require_permission
+from app.modules.user.model import User
 
 
 router = APIRouter()
@@ -43,10 +51,16 @@ def get_employee_service(
 )
 def create_employee(
     data: EmployeeCreate,
+    current_user: User = Depends(
+        require_permission(EMPLOYEES_CREATE)
+    ),
     employee_service: EmployeeService = Depends(get_employee_service),
 ):
     try:
-        return employee_service.create(data)
+        return employee_service.create(
+            data,
+            company_id=current_user.company_id,
+        )
 
     except EmployeeEmailAlreadyExistsException:
         raise HTTPException(
@@ -90,8 +104,17 @@ def get_employees(
     company_id: UUID,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
+    current_user: User = Depends(
+        require_permission(EMPLOYEES_READ)
+    ),
     employee_service: EmployeeService = Depends(get_employee_service),
 ):
+    if company_id != current_user.company_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Empresa no encontrada.",
+        )
+
     return employee_service.get_all_by_company(
         company_id=company_id,
         skip=skip,
@@ -105,10 +128,16 @@ def get_employees(
 )
 def get_employee(
     employee_id: UUID,
+    current_user: User = Depends(
+        require_permission(EMPLOYEES_READ)
+    ),
     employee_service: EmployeeService = Depends(get_employee_service),
 ):
     try:
-        return employee_service.get_by_id(employee_id)
+        return employee_service.get_by_id(
+            employee_id,
+            company_id=current_user.company_id,
+        )
 
     except EmployeeNotFoundException:
         raise HTTPException(
@@ -124,12 +153,16 @@ def get_employee(
 def update_employee(
     employee_id: UUID,
     data: EmployeeUpdate,
+    current_user: User = Depends(
+        require_permission(EMPLOYEES_UPDATE)
+    ),
     employee_service: EmployeeService = Depends(get_employee_service),
 ):
     try:
         return employee_service.update(
             employee_id=employee_id,
             data=data,
+            company_id=current_user.company_id,
         )
 
     except EmployeeNotFoundException:
@@ -172,10 +205,16 @@ def update_employee(
 )
 def delete_employee(
     employee_id: UUID,
+    current_user: User = Depends(
+        require_permission(EMPLOYEES_DELETE)
+    ),
     employee_service: EmployeeService = Depends(get_employee_service),
 ):
     try:
-        employee_service.delete(employee_id)
+        employee_service.delete(
+            employee_id,
+            company_id=current_user.company_id,
+        )
 
     except EmployeeNotFoundException:
         raise HTTPException(
